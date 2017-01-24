@@ -34,11 +34,13 @@ print_data(reuters_data_loader)
 print('data loaded, now clustering magic begins (once its done...)')
 """
 
+#random data generation
 np.random.seed(0)
 
-# batch_size = 45
 centers = [[1, 1], [-1, -1], [1, -1]]
 n_clusters = len(centers)
 X, labels_true = make_blobs(n_samples=3000, centers=centers, cluster_std=0.7)
+#end of random data generation
+
 comparer = AlgorithmsComparer()
 comparer.compare(X, 3, 100, 2, 0.3, 0.5, 100)
