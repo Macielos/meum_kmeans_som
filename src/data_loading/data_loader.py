@@ -2,11 +2,14 @@ import os
 import io
 import numpy as np
 from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
 
 from data_loading.data_record import DataRecord
+
+from sklearn.datasets import fetch_20newsgroups
 
 class SimpleDataLoader(object):
     records = []
@@ -16,9 +19,10 @@ class SimpleDataLoader(object):
     use_hashing = False
 
     def __init__(self, features=0, separator=',', skip_header=True, limit=-1):
-        self.hasher = HashingVectorizer(n_features=features*100,
+        self.hasher = HashingVectorizer(n_features=2**18,
                                stop_words='english', non_negative=True,
                                norm=None, binary=False)
+        self.dictVectorizer = DictVectorizer()
 
         if features > 0:
             self.use_hashing = True
@@ -60,41 +64,15 @@ class SimpleDataLoader(object):
     def line_to_record(self, line):
         parts = line.split(self.separator)
         return DataRecord(parts[0], parts[1:])
-    """
-    def get_tuples(self):
-        records = []
+
+    def postprocess(self, records):
+        return records
+
+    def get(self):
+        records_to_process = []
         for record in self.records:
-            data = record.data
-            if self.use_hashing:
-                data = self.hasher.fit_transform(data)
-                data = self.lsa.fit_transform(data)
-            records.append(tuple(data))
-        return np.array(records)
-    """
-    def get_array(self):
-        return self.get(False)
-
-    def get_tuples(self):
-        return self.get(True)
-
-    def get(self, is_tuple):
-        if not self.use_hashing:
-            records = []
-            for record in self.records:
-                records.append(record.data)
-            return records
-
-        records = []
-        for record in self.records:
-            records.append(" ".join(record.data))
-
-        records = self.hasher.fit_transform(records)
-        records = self.lsa.fit_transform(records)
-
-        if is_tuple:
-            return tuple(records)
-        else:
-            return records
+            records_to_process.append(record.data)
+        return self.postprocess(records_to_process)
 
     def to_float_array(self, array):
         number_array = []
@@ -112,18 +90,31 @@ class SimpleDataLoader(object):
       except ValueError:
         return False
 
+
+class FeatureExtractingDataLoader(SimpleDataLoader):
+
+    def postprocess(self, records):
+        records_to_process = []
+        for record in records:
+            records_to_process.append(" ".join(record).strip('\n'))
+        records2 = self.hasher.transform(records_to_process)
+        records3 = self.lsa.fit_transform(records2)
+        return records3
+
+
 class SimpleWithDateDataLoader(SimpleDataLoader):
 
     def line_to_record(self, line):
         parts = line.split(self.separator)
         return DataRecord(parts[0] + parts[1], self.to_float_array(parts[2:]))
 
-class LongTextDataLoader(SimpleDataLoader):
+
+class LongTextDataLoader(FeatureExtractingDataLoader):
     #TODO znalezc lepsza liste i czytac ja z pliku
     stop_words = {'is', 'am', 'are', 'a', 'an', 'the', 'in', 'on', 'at', 'and', 'or'}
 
     def read_file(self, filename):
-        print('reading data from file: '+filename)
+        #print('reading data from file: '+filename)
 
         words = set()
         with io.open(filename, "r", encoding="utf8") as file:

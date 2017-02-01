@@ -7,7 +7,7 @@ TODO
 """
 
 # plants
-from data_loading.data_loader import SimpleDataLoader, SimpleWithDateDataLoader, LongTextDataLoader
+from data_loading.data_loader import SimpleDataLoader, SimpleWithDateDataLoader, LongTextDataLoader, FeatureExtractingDataLoader
 from algorithms.algorithms import AlgorithmsComparer
 from sklearn.datasets.samples_generator import make_blobs
 import numpy as np
@@ -18,33 +18,46 @@ def print_data(loader):
     #print('last 10 records: \n' + (', '.join(map(str, loader.records[-10:-1]))))
 
 print('loading data...')
-
-plants_data_loader = SimpleDataLoader(100, limit=100)
+"""
+plants_data_loader = FeatureExtractingDataLoader(1000, limit=1000)
 plants_data_loader.load('../data/plants')
 print_data(plants_data_loader)
-
-power_cons_data_loader = SimpleWithDateDataLoader(0, ';', True, 100)
+"""
+power_cons_data_loader = SimpleWithDateDataLoader(0, ';', True, 20000)
 power_cons_data_loader.load('../data/power_consumption')
 print_data(power_cons_data_loader)
 """
-reuters_data_loader = LongTextDataLoader(2**18, ' ', False, 100)
+reuters_data_loader = LongTextDataLoader(2**10, ' ', False, 1000)
 reuters_data_loader.load('../data/reuters/C50train')
 print_data(reuters_data_loader)
 """
 print('data loaded, now clustering magic begins')
 
+data_loader = power_cons_data_loader
 
-#np.random.seed(0)
-
-# batch_size = 45
-#centers = [[1, 1], [-1, -1], [1, -1]]
-#n_clusters = len(centers)
-#X, labels_true = make_blobs(n_samples=3000, centers=centers, cluster_std=0.7)
-
-data_loader = plants_data_loader
-
-array = data_loader.get_array()
-tuples = data_loader.get_tuples()
+array = data_loader.get()
+tuples = tuple(array)
 
 comparer = AlgorithmsComparer()
-comparer.compare(tuples, array, 2, 100, len(array[0]), 0.3, 0.5, 100)
+# comparer.compare(tuples, array, 3, 100, len(array[0]), 0.3, 0.5, 100)
+
+with open("results.csv", "a") as result_file:
+    result_file.write(";".join(["i", "cluster_count", "records", "som_learning_rate", "som_iterations", " ", "SOM", "time", "clusters", "min", "max", "mean", "std", "K-MEANS", " ", "time", "clusters", "min", "max", "mean", "std"])+"\n")
+
+for cluster_count in [3, 5, 10]:
+    for i in range(0, 3):
+        comparer.compare(i, tuples, array, cluster_count, 100, len(array[0]), 0.3, 0.5, 100)
+
+for limit in [100, 1000, -1]:
+    arrayLimited = array[:limit] if limit > 0 else array
+    tupleLimited = tuple(arrayLimited)
+    for i in range(0, 3):
+        comparer.compare(i, tupleLimited, arrayLimited, 5, 100, len(arrayLimited[0]), 0.3, 0.5, 100)
+
+for learning_rate in [0.1, 0.3, 0.6]:
+    for i in range(0, 3):
+        comparer.compare(i, tuples, array, 5, 100, len(array[0]), 0.3, learning_rate, 100)
+
+for som_iterations in [10, 100, 200]:
+    for i in range(0, 3):
+        comparer.compare(i, tuples, array, 5, 100, len(array[0]), 0.3, 0.5, som_iterations)

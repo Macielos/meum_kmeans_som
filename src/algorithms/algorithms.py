@@ -21,7 +21,7 @@ class AlgorithmsComparer(object):
     def __init__(self):
         return
 
-    def compare(self, data_tuples, data_array, n_clusters, n_init, data_dimension, sigma, learning_rate, som_iterations):
+    def compare(self, iteration, data_tuples, data_array, n_clusters, n_init, data_dimension, sigma, learning_rate, som_iterations):
 
         #K-means
         print('starting k-means')
@@ -29,18 +29,20 @@ class AlgorithmsComparer(object):
         t0 = time.time()
         k_means.fit(data_tuples)
         t_batch = time.time() - t0
-        print('k-means done in ' + str(t_batch))
+        k_means_time = str(t_batch)
+        print('k-means done in ' + k_means_time)
 
         k_means_cluster_centers = np.sort(k_means.cluster_centers_, axis=0)
         k_means_clusters = pairwise_distances_argmin(data_tuples, k_means_cluster_centers)
 
         #SOM
         print('starting SOM')
-        som = MiniSom(n_clusters, n_clusters, data_dimension, sigma, learning_rate)
+        som = MiniSom(1, n_clusters, data_dimension, sigma, learning_rate)
         t0 = time.time()
         som.train_random(data_array, som_iterations)
         t_batch2 = time.time() - t0
-        print('SOM done in ' + str(t_batch2))
+        som_time = str(t_batch2)
+        print('SOM done in ' + som_time)
 
         som_clusters_array = [None] * len(data_array)
         for index in range(len(data_array)):
@@ -105,4 +107,7 @@ class AlgorithmsComparer(object):
         print('max - ' + str(som_max))
         print('mean - ' + str(som_mean))
         print('std - ' + str(som_std))
+
+        with open("results.csv", "a") as result_file:
+            result_file.write(";".join([str(iteration), str(n_clusters), str(len(data_array)), str(learning_rate), str(som_iterations), " ", " ", str(k_means_time), str(k_means_clusters_size),str(k_means_min),str(k_means_max),str(k_means_mean),str(k_means_std), " ", " ", str(som_time), str(som_clusters_size),str(som_min),str(som_max),str(som_mean),str(som_std)])+"\n")
         return result
